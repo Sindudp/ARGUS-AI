@@ -1,0 +1,35 @@
+[
+  {
+    "timestamp": "2024-01-15 02:34:21",
+    "source_ip": "192.168.1.105",
+    "dest_ip": "10.0.0.1",
+    "event_type": "login_attempt",
+    "status": "failed",
+    "count": 47,
+    "user": "admin"
+  },
+  {
+    "timestamp": "2024-01-15 02:34:45",
+    "source_ip": "192.168.1.105",
+    "dest_ip": "10.0.0.1",
+    "event_type": "login_attempt",
+    "status": "success",
+    "user": "admin"
+  },
+  {
+    "timestamp": "2024-01-15 02:35:10",
+    "source_ip": "10.0.0.1",
+    "dest_ip": "185.220.101.45",
+    "event_type": "data_transfer",
+    "bytes_sent": 524288000,
+    "port": 443
+  },
+  {
+    "timestamp": "2024-01-15 02:36:00",
+    "source_ip": "192.168.1.200",
+    "dest_ip": "10.0.0.1",
+    "event_type": "port_scan",
+    "ports_scanned": 1000,
+    "status": "detected"
+  }
+]
