@@ -1,3 +1,9 @@
-echo venv/ > .gitignore
-echo __pycache__/ >> .gitignore
-echo .env >> .gitignore
+venv/
+__pycache__/
+.env
+*.pyc
+*.pyd
+*.dll
+*.exe
+models/
+.chroma/
