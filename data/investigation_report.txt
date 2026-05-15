@@ -1,0 +1,99 @@
+ARGUS INVESTIGATION REPORT
+============================================================
+**Incident Investigation Report**
+
+**Incident Overview**
+
+This report documents the investigation of four suspicious events detected in our network security logs. The events include a brute force login attempt, a successful login attempt, a large data transfer, and a port scan detection. The purpose of this investigation is to identify the root cause of these events, determine the attacker's profile, and provide recommendations for remediation and prevention.
+
+**Event 1: Brute Force Login Attempt**
+
+* **Attack Type:** Brute Force Attack
+* **Severity Score:** 80
+* **MITRE ATT&CK Technique:** T1110 - Brute Force
+
+### Attack Chain Analysis
+
+1. **Initial Compromise**: The attacker attempted to brute force the login credentials of a user account.
+2. **Exploitation**: The attacker used a tool to automate the login attempts, trying different combinations of usernames and passwords.
+3. **Post-Exploitation**: If the attacker had been successful, they would have gained access to the user's account and potentially moved laterally across the network.
+4. **Future Actions**: The attacker may attempt to escalate privileges, install malware, or exfiltrate sensitive data.
+
+### Attacker Profile Assessment
+
+The attacker is likely a **script kiddie** or a **cybercriminal** who is using automated tools to attempt to gain unauthorized access to our network. The use of a brute force attack suggests a lack of sophistication, but the potential impact of a successful attack should not be underestimated.
+
+### Blast Radius Assessment
+
+The blast radius of this attack includes all user accounts that have weak or default passwords. If the attacker is successful, they could gain access to sensitive data, systems, and applications.
+
+### Root Cause Identification
+
+The root cause of this attack is likely a **weak password policy** or **inadequate account lockout policies**. This has allowed the attacker to attempt multiple login attempts without being blocked or detected.
+
+### Evidence Collection Checklist
+
+* Network logs of the brute force login attempts
+* System logs of the targeted user account
+* Password policies and account lockout settings
+
+### Step-by-Step Remediation Plan
+
+1. **Block the source IP address**: Immediately block the source IP address (192.168.1.105) to prevent further brute force attempts.
+2. **Reset passwords**: Reset the passwords of all user accounts that were targeted by the brute force attack.
+3. **Implement rate-limiting**: Implement a rate-limiting feature to prevent future brute force attacks.
+4. **Enforce strong password policies**: Enforce strong password policies, including multi-factor authentication, to prevent weak passwords.
+
+### Prevention Recommendations
+
+* **Regularly review and update password policies**: Regularly review and update password policies to ensure they are strong and effective.
+* **Implement account lockout policies**: Implement account lockout policies to prevent brute force attacks.
+* **Use multi-factor authentication**: Use multi-factor authentication to add an additional layer of security to user accounts.
+
+**Event 3: Large Data Transfer**
+
+* **Attack Type:** Potential Data Exfiltration
+* **Severity Score:** 90
+* **MITRE ATT&CK Technique:** T1041 - Exfiltration Over C2 Channel
+
+### Attack Chain Analysis
+
+1. **Initial Compromise**: The attacker gained access to our network, potentially through a compromised user account or exploit.
+2. **Exploitation**: The attacker used a command and control (C2) channel to establish a connection to the compromised system.
+3. **Post-Exploitation**: The attacker transferred a large amount of data (524288000 bytes) to the destination IP address (185.220.101.45).
+4. **Future Actions**: The attacker may attempt to exfiltrate additional data or install malware on the compromised system.
+
+### Attacker Profile Assessment
+
+The attacker is likely an **Advanced Persistent Threat (APT) group** or a **sophisticated cybercriminal** who has gained access to our network and is attempting to exfiltrate sensitive data.
+
+### Blast Radius Assessment
+
+The blast radius of this attack includes all sensitive data that is accessible from the compromised system. If the attacker is successful, they could gain access to sensitive information, including intellectual property, customer data, or financial information.
+
+### Root Cause Identification
+
+The root cause of this attack is likely a **vulnerability in the network** or a **compromised user account**. This has allowed the attacker to gain access to our network and establish a C2 channel.
+
+### Evidence Collection Checklist
+
+* Network logs of the data transfer
+* System logs of the compromised system
+* Destination IP address (185.220.101.45) analysis
+
+### Step-by-Step Remediation Plan
+
+1. **Contain the breach**: Immediately contain the breach by isolating the compromised system and blocking the destination IP address (185.220.101.45).
+2. **Investigate the breach**: Investigate the breach to determine the root cause and the extent of the damage.
+3. **Reset passwords**: Reset the passwords of all user accounts that have access to the compromised system.
+4. **Implement additional security controls**: Implement additional security controls, such as network segmentation and intrusion detection systems, to prevent future data exfiltration attempts.
+
+### Prevention Recommendations
+
+* **Regularly review and update network configurations**: Regularly review and update network configurations to ensure they are secure and up-to-date.
+* **Implement network segmentation**: Implement network segmentation to limit the attack surface and restrict access to sensitive areas of the network.
+* **Use intrusion detection systems**: Use intrusion detection systems to detect and alert on potential data exfiltration attempts.
+
+**Conclusion**
+
+This incident investigation report highlights the importance of regularly reviewing and updating security controls to prevent brute force attacks and data exfiltration attempts. The attacks reported in this incident are likely the result of weak password policies and vulnerabilities in the network. By implementing strong password policies, account lockout policies, and network segmentation, we can prevent similar attacks in the future. Additionally, regularly reviewing and updating network configurations and using intrusion detection systems can help detect and alert on potential security incidents.
