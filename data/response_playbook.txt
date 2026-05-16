@@ -5,54 +5,53 @@ ARGUS INCIDENT RESPONSE PLAYBOOK
 **Threat 1: Brute Force Attack**
 
 1. **IMMEDIATE ACTIONS (first 15 minutes)**:
-	* Block the source IP address 192.168.1.105 at the firewall to prevent further login attempts.
-	* Disable the targeted admin account to prevent potential unauthorized access.
-	* Isolate the affected system (10.0.0.1) from the network to prevent lateral movement.
-	* Alert the security team and relevant stakeholders of the potential security incident.
+	* Exact commands or steps to contain the threat: Block source IP 192.168.1.105 at the firewall level to prevent further brute force attempts.
+	* Which systems to isolate: Isolate the system with destination IP 10.0.0.1 to prevent lateral movement.
+	* Which IPs to block: Block source IP 192.168.1.105 at the firewall level.
+	* Which accounts to disable: Disable all accounts that were targeted by the brute force attack.
 2. **CONTAINMENT PLAYBOOK (step by step numbered list)**:
-	1. **SOC analyst**: Verify the incident and confirm the brute force attack (Time estimate: 5 minutes).
-	2. **System admin**: Change the password of the targeted admin account and ensure that all accounts have robust passwords (Time estimate: 10 minutes).
-	3. **SOC analyst**: Perform a thorough analysis of the login attempt logs to identify potential vulnerabilities (Time estimate: 30 minutes).
-	4. **System admin**: Implement additional security measures, such as multi-factor authentication and rate limiting on login attempts (Time estimate: 60 minutes).
-	5. **Management**: Notify stakeholders and provide updates on the incident (Time estimate: Ongoing).
+	1. Block source IP 192.168.1.105 at the firewall level (Responsible: SOC analyst, Time estimate: 5 minutes).
+	2. Isolate the system with destination IP 10.0.0.1 (Responsible: System admin, Time estimate: 10 minutes).
+	3. Disable all accounts that were targeted by the brute force attack (Responsible: System admin, Time estimate: 10 minutes).
+	4. Analyze network logs to identify potential vulnerabilities (Responsible: SOC analyst, Time estimate: 30 minutes).
+	5. Implement additional security measures, such as multi-factor authentication (Responsible: System admin, Time estimate: 60 minutes).
 3. **EXECUTIVE SUMMARY (non-technical, 3 sentences)**:
-	A brute force attack was detected, where an attacker attempted to guess the password of an admin account. The attack was blocked, and the affected account was disabled to prevent potential unauthorized access. The security team is working to implement additional security measures to prevent similar incidents in the future.
-4. **SEVERITY RATING**: CRITICAL
+	A brute force attack was detected, where an attacker attempted to guess passwords for multiple accounts. The attack was blocked, and the targeted system was isolated to prevent further damage. Our team is working to implement additional security measures to prevent similar attacks in the future.
+4. **SEVERITY RATING**: MEDIUM
 5. **ESTIMATED RECOVERY TIME**: 2 hours
 
 **Threat 2: Data Exfiltration**
 
 1. **IMMEDIATE ACTIONS (first 15 minutes)**:
-	* Block the source IP address 10.0.0.1 at the firewall to prevent further data transfer.
-	* Block the destination IP address 185.220.101.45 at the firewall to prevent data exfiltration.
-	* Isolate the affected system (10.0.0.1) from the network to prevent lateral movement.
-	* Alert the security team and relevant stakeholders of the potential security incident.
+	* Exact commands or steps to contain the threat: Block destination IP 185.220.101.45 at the firewall level to prevent further data exfiltration.
+	* Which systems to isolate: Isolate the system with source IP 10.0.0.1 to prevent lateral movement.
+	* Which IPs to block: Block destination IP 185.220.101.45 at the firewall level.
+	* Which accounts to disable: Disable all accounts that were associated with the data exfiltration.
 2. **CONTAINMENT PLAYBOOK (step by step numbered list)**:
-	1. **SOC analyst**: Verify the incident and confirm the data exfiltration (Time estimate: 5 minutes).
-	2. **System admin**: Perform a thorough analysis of the network traffic captures to identify the exfiltrated data (Time estimate: 60 minutes).
-	3. **SOC analyst**: Analyze the data transfer logs to identify potential vulnerabilities (Time estimate: 30 minutes).
-	4. **System admin**: Implement additional security measures, such as data loss prevention mechanisms and network monitoring (Time estimate: 120 minutes).
-	5. **Management**: Notify stakeholders and provide updates on the incident (Time estimate: Ongoing).
+	1. Block destination IP 185.220.101.45 at the firewall level (Responsible: SOC analyst, Time estimate: 5 minutes).
+	2. Isolate the system with source IP 10.0.0.1 (Responsible: System admin, Time estimate: 10 minutes).
+	3. Disable all accounts that were associated with the data exfiltration (Responsible: System admin, Time estimate: 10 minutes).
+	4. Analyze network logs to identify potential vulnerabilities (Responsible: SOC analyst, Time estimate: 30 minutes).
+	5. Implement additional security measures, such as data loss prevention (Responsible: System admin, Time estimate: 60 minutes).
 3. **EXECUTIVE SUMMARY (non-technical, 3 sentences)**:
-	A data exfiltration attack was detected, where an attacker transferred a large amount of data from the network. The attack was blocked, and the affected system was isolated to prevent further data loss. The security team is working to implement additional security measures to prevent similar incidents in the future.
+	A data exfiltration attack was detected, where an attacker transferred a large amount of sensitive data outside the network. The attack was blocked, and the targeted system was isolated to prevent further damage. Our team is working to implement additional security measures to prevent similar attacks in the future.
 4. **SEVERITY RATING**: HIGH
 5. **ESTIMATED RECOVERY TIME**: 4 hours
 
 **Threat 3: Port Scan**
 
 1. **IMMEDIATE ACTIONS (first 15 minutes)**:
-	* Block the source IP address 192.168.1.200 at the firewall to prevent further port scans.
-	* Isolate the affected system (10.0.0.1) from the network to prevent lateral movement.
-	* Alert the security team and relevant stakeholders of the potential security incident.
+	* Exact commands or steps to contain the threat: Block source IP 192.168.1.200 at the firewall level to prevent further reconnaissance activity.
+	* Which systems to isolate: Isolate the system with destination IP 10.0.0.1 to prevent lateral movement.
+	* Which IPs to block: Block source IP 192.168.1.200 at the firewall level.
+	* Which accounts to disable: Disable all accounts that were targeted by the port scan.
 2. **CONTAINMENT PLAYBOOK (step by step numbered list)**:
-	1. **SOC analyst**: Verify the incident and confirm the port scan (Time estimate: 5 minutes).
-	2. **System admin**: Perform a thorough analysis of the port scan logs to identify potential vulnerabilities (Time estimate: 30 minutes).
-	3. **SOC analyst**: Analyze the network traffic captures to identify potential reconnaissance activities (Time estimate: 30 minutes).
-	4. **System admin**: Implement additional security measures, such as firewalls and intrusion detection systems (Time estimate: 60 minutes).
-	5. **Management**: Notify stakeholders and provide updates on the incident (Time estimate: Ongoing).
+	1. Block source IP 192.168.1.200 at the firewall level (Responsible: SOC analyst, Time estimate: 5 minutes).
+	2. Isolate the system with destination IP 10.0.0.1 (Responsible: System admin, Time estimate: 10 minutes).
+	3. Disable all accounts that were targeted by the port scan (Responsible: System admin, Time estimate: 10 minutes).
+	4. Analyze network logs to identify potential vulnerabilities (Responsible: SOC analyst, Time estimate: 30 minutes).
+	5. Implement additional security measures, such as intrusion detection and prevention (Responsible: System admin, Time estimate: 60 minutes).
 3. **EXECUTIVE SUMMARY (non-technical, 3 sentences)**:
-	A port scan attack was detected, where an attacker scanned a large number of ports to identify potential vulnerabilities. The attack was blocked, and the affected system was isolated to prevent further reconnaissance. The security team is working to implement additional security measures to prevent similar incidents in the future.
-4. **SEVERITY RATING**: MEDIUM
-5. **ESTIMATED RECOVERY TIME**: 1 hour
-
-This incident response playbook provides immediate actions, containment playbooks, executive summaries, severity ratings, and estimated recovery times for each of the confirmed threats. The security team should follow these playbooks to contain and eradicate the threats, and to prevent similar incidents in the future.
+	A port scan attack was detected, where an attacker scanned multiple ports to identify potential vulnerabilities. The attack was blocked, and the targeted system was isolated to prevent further damage. Our team is working to implement additional security measures to prevent similar attacks in the future.
+4. **SEVERITY RATING**: CRITICAL
+5. **ESTIMATED RECOVERY TIME**: 6 hours
