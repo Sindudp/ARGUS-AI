@@ -1,0 +1,112 @@
+**ARGUS INCIDENT RESPONSE PLAYBOOKS**  
+*Prepared for the three highest‑severity threats identified in the triage.*  
+
+---
+
+## PLAYBOOK 1 – RANSOMWARE_SPREAD (Lateral Movement) – MITRE T1021 Remote Services  
+
+**Management Summary (2 sentences)**  
+The ransomware is propagating laterally via compromised credentials and the unpatched PrintNightmare vulnerability, threatening rapid encryption of additional hosts. Immediate network isolation, credential revocation, and patching of the Print Spooler service are required to stop the spread and preserve business continuity.  
+
+### 1. Immediate Containment Actions (≤ 30 min)  
+| Action | Owner | Target Completion |
+|--------|-------|--------------------|
+| Activate “Network‑Isolation” playbook – disable all inbound RDP/SMB from the compromised segment. | Network Security Engineer (NSE) | 15 min |
+| Pull the affected workstation(s) from AD (disable computer accounts). | Identity & Access Management (IAM) Lead | 20 min |
+| Block the compromised user’s credentials in Azure AD/ADFS and force password reset for all accounts that used the same password hash. | IAM Lead | 25 min |
+| Deploy a temporary firewall rule to drop SMB (port 445) and RDP (port 3389) traffic from any host that is not a known admin workstation. | NSE | 30 min |
+
+### 2. Detailed Response Steps  
+
+| # | Step | Owner | Time‑frame |
+|---|------|-------|------------|
+| 1 | **Collect forensic snapshots** of the initial foothold host (memory dump, disk image, event logs). | SOC Analyst – Forensics (FA) | 0‑1 h |
+| 2 | **Identify all active sessions** using `query user`, `qwinsta`, and NetSessionEnum to locate additional compromised RDP/SMB connections. | FA | 1‑2 h |
+| 3 | **Disable Print Spooler service** on all Windows servers/workstations (via Group Policy). | IT Operations (ITO) | 2‑3 h |
+| 4 | **Apply Microsoft Patch KB5004945 (PrintNightmare)** to every Windows 10/Server 2016‑2022 system. Verify patch status with SCCM/Intune. | Patch Management Team (PMT) | 3‑6 h |
+| 5 | **Run credential‑dumping detection rules** (e.g., Mimikatz signatures) in EDR; quarantine any process that matches. | EDR Analyst (EDA) | 3‑5 h |
+| 6 | **Reset all privileged service accounts** (Domain Admins, RDP admin groups) and enforce MFA for remote logins. | IAM Lead | 5‑8 h |
+| 7 | **Perform lateral‑movement hunt** – query Windows Event ID 4624, 4648, 5140 for abnormal source IPs and “Logon Type 10” (RemoteInteractive). Flag any new hosts and isolate them. | FA | 8‑12 h |
+| 8 | **Update detection signatures** for ransomware payload (hashes, YARA rules) and push to all endpoints. | EDA | 12‑14 h |
+| 9 | **Validate containment** – confirm no new encryption events in the last 30 min across the environment (monitor file‑system changes, ransomware‑specific file extensions). | IC (Incident Commander) | 14‑16 h |
+|10 | **Document actions** in the incident ticket, capture timestamps, owners, and evidence for legal/forensic hand‑off. | IC | 16‑18 h |
+|11 | **Restore any isolated hosts** after confirming they are clean (re‑image if necessary). | ITO | 24‑48 h |
+|12 | **Post‑incident review** – root‑cause analysis, update run‑books, and schedule quarterly Patch‑Tuesday for Print Spooler. | IC & PMT | ≤ 7 days |
+
+---
+
+## PLAYBOOK 2 – DATA_EXFILTRATION – MITRE T1041 Exfiltration Over C2 Channel  
+
+**Management Summary (2 sentences)**  
+Attackers have leveraged an unpatched MOVEit Transfer server (CVE‑2023‑34362) to steal sensitive data and exfiltrate it via an encrypted C2 channel, bypassing existing DLP controls. Immediate isolation of the MOVEit host, forensic capture of the exfiltration traffic, and remediation of the vulnerability are required to stop data loss and assess impact.  
+
+### 1. Immediate Containment Actions (≤ 30 min)  
+| Action | Owner | Target Completion |
+|--------|-------|--------------------|
+| Quarantine the MOVEit Transfer server (remove from VLAN, disable inbound/outbound traffic). | Network Security Engineer (NSE) | 10 min |
+| Block outbound HTTPS to unknown external IPs from the internal subnet containing the compromised host. | NSE | 15 min |
+| Disable the compromised service account used for the SQL injection (if applicable). | IAM Lead | 20 min |
+| Activate DLP “kill‑switch” – drop all large (> 1 MB) outbound TLS flows until investigation completes. | DLP Engineer (DLPE) | 30 min |
+
+### 2. Detailed Response Steps  
+
+| # | Step | Owner | Time‑frame |
+|---|------|-------|------------|
+| 1 | **Capture full packet trace** (PCAP) on the MOVEit server’s NIC and upstream firewall for the last 24 h. | Network Forensics Analyst (NFA) | 0‑1 h |
+| 2 | **Preserve the MOVEit database** – take a hot backup of the underlying SQL database and file repository. | DB Admin (DBA) | 1‑2 h |
+| 3 | **Identify the exploited SQL injection vector** – review web‑server logs, WAF alerts, and the MOVEit CVE‑2023‑34362 advisory. | Application Security Engineer (ASE) | 2‑4 h |
+| 4 | **Apply the vendor‑released patch** for MOVEit Transfer (version ≥ 2023.0.6) across all environments. | PMT | 4‑8 h |
+| 5 | **Rotate all MOVEit service‑account passwords** and enforce least‑privilege access (remove unnecessary DB write rights). | IAM Lead | 8‑10 h |
+| 6 | **Enable strict outbound DLP rules** – inspect TLS payloads with SSL‑inspection, flag any data‑type matches (PII, PHI, IP). | DLPE | 10‑12 h |
+| 7 | **Run a full data‑loss‑prevention audit** on all critical data stores to verify no other exfiltration paths exist (e.g., cloud storage buckets). | Cloud Security Engineer (CSE) | 12‑18 h |
+| 8 | **Conduct a threat‑hunt** for the C2 beacon – query DNS logs for anomalous domains, inspect proxy logs for large encrypted uploads. | NFA | 18‑24 h |
+| 9 | **Notify legal & compliance** of potential breach; begin evidence‑preservation chain‑of‑custody for regulatory reporting. | Incident Commander (IC) | 24‑26 h |
+|10 | **Communicate with affected business units** – provide status, expected downtime, and data‑impact assessment. | Communications Lead (CL) | 24‑28 h |
+|11 | **Restore MOVEit from a clean backup** (if the server was compromised beyond repair) and re‑enable after verification. | DBA & ITO | 48‑72 h |
+|12 | **Post‑incident lessons‑learned** – add MOVEit‑specific signatures to WAF/IPS, schedule quarterly vulnerability scans for third‑party SaaS. | IC & ASE | ≤ 7 days |
+
+---
+
+## PLAYBOOK 3 – RANSOMWARE_START (Initial Encryption) – MITRE T1486 Data Encrypted for Impact  
+
+**Management Summary (2 sentences)**  
+Ransomware has begun encrypting files after exploiting the PrintNightmare (CVE‑2021‑34527) and CLFS elevation (CVE‑2023‑28252) vulnerabilities, disabling defenses and deleting shadow copies. Rapid isolation of infected endpoints, restoration from immutable backups, and eradication of the malicious payload are essential to halt encryption and recover data.  
+
+### 1. Immediate Containment Actions (≤ 30 min)  
+| Action | Owner | Target Completion |
+|--------|-------|--------------------|
+| Disconnect all endpoints showing encryption activity from the network (disable NIC or quarantine via NAC). | Endpoint Protection Engineer (EPE) | 10 min |
+| Stop the ransomware process (e.g., `ransom.exe`) using EDR “kill‑process” command. | EPE | 15 min |
+| Disable Windows Defender real‑time protection on the infected host to prevent it from being re‑enabled by the ransomware (will be re‑enabled later). | EPE | 20 min |
+| Initiate immediate shadow‑copy recreation (if possible) and block `vssadmin delete shadows` via Group Policy. | ITO | 30 min |
+
+### 2. Detailed Response Steps  
+
+| # | Step | Owner | Time‑frame |
+|---|------|-------|------------|
+| 1 | **Collect volatile memory** from each infected host (LiME or FTK Imager) for ransomware analysis. | FA | 0‑1 h |
+| 2 | **Identify ransomware binary hash** and create a YARA rule; push to all EDR agents for detection and quarantine. | EDA | 1‑2 h |
+| 3 | **Apply Microsoft patches** for PrintNightmare (KB5004945) and CLFS elevation (KB5021234) on *all* Windows systems, prioritising domain controllers and file servers. | PMT | 2‑6 h |
+| 4 | **Force password reset** for any accounts that may have been harvested (especially local admin and service accounts). | IAM Lead | 4‑8 h |
+| 5 | **Disable scheduled tasks** that the ransomware may have created (e.g., `schtasks /query /fo LIST /v`). Remove any unknown tasks. | ITO | 6‑8 h |
+| 6 | **Restore encrypted files** from the most recent immutable backup (offline or cloud‑based Write‑Once‑Read‑Many). Verify integrity before re‑introducing to production. | Backup Engineer (BE) | 8‑24 h |
+| 7 | **Re‑enable endpoint protection** (Windows Defender, third‑party AV) and run a full scan on each restored host. | EPE | 24‑30 h |
+| 8 | **Check for persistence mechanisms** – registry run keys, WMI event filters, PowerShell profiles – and clean any malicious entries. | FA | 30‑36 h |
+| 9 | **Monitor for C2 callbacks** – use DNS sinkhole and proxy logs to ensure the ransomware cannot re‑establish contact. | NFA | 36‑48 h |
+|10 | **Update incident ticket** with forensic findings, list of restored assets, and any data loss identified. | IC | 48‑50 h |
+|11 | **Conduct a “lessons‑learned” workshop** – include patch‑management gaps, backup strategy deficiencies, and EDR tuning. | IC & PMT | ≤ 7 days |
+|12 | **Report to senior leadership & legal** – include breach impact assessment, regulatory notification timeline, and remediation status. | CL & Legal Counsel (LC) | ≤ 48 h |
+
+---
+
+### QUICK‑REFERENCE MATRIX  
+
+| Threat | MITRE Technique | Critical CVE(s) | Immediate Owner(s) | Containment Deadline |
+|--------|----------------|----------------|--------------------|----------------------|
+| Ransomware Spread (Lateral) | T1021 – Remote Services | CVE‑2021‑34527 (PrintNightmare) | NSE, IAM, PMT | 30 min |
+| Data Exfiltration | T1041 – Exfiltration Over C2 | CVE‑2023‑34362 (MOVEit SQLi) | NSE, DLPE, PMT | 30 min |
+| Ransomware Start (Encryption) | T1486 – Data Encrypted | CVE‑2021‑34527, CVE‑2023‑28252 | EPE, PMT, IAM | 30 min |
+
+---  
+
+**End of Playbooks**.  All steps are actionable, assigned to specific owners, and include realistic time‑boxes to drive rapid containment, eradication, and recovery.
