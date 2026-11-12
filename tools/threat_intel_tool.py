@@ -1,6 +1,5 @@
 # tools/threat_intel_tool.py
-# Purpose: Give Investigation Agent ability to search
-# ChromaDB CVE database automatically during investigation
+# Purpose: lets the Investigation Agent search the CVE knowledge base
 
 import sys
 import os
@@ -9,66 +8,50 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from crewai.tools import tool
 from rag.cve_loader import ARGUSCVELoader
 
-# Initialize CVE loader once — loads 20 CVEs into ChromaDB
 print("🔧 Threat Intel Tool: Loading CVE database...")
 cve_loader = ARGUSCVELoader()
 cve_loader.load_into_chromadb()
 print("✅ Threat Intel Tool: Ready!")
 
+MIN_SCORE = 0.30  # below this, we say "no strong match"
+
+
 @tool("CVE Intelligence Search")
 def search_cve_database(attack_description: str) -> str:
     """
-    Search the CVE vulnerability database for threats matching
-    the given attack description. Use this tool when investigating
-    any suspicious security event to find matching vulnerabilities,
-    their severity scores, and recommended fixes.
-    
-    Input: description of the attack or suspicious behavior
-    Output: matching CVEs with severity and description
+    Search the CVE vulnerability database for software weaknesses that
+    could relate to the given attack description. Use it when investigating
+    a security event. It returns only strong text matches. If nothing
+    matches, it says so.
+
+    Input: description of the weakness or attack
+    Output: possible matching CVEs with severity and description
     """
-    
     print(f"\n🔍 CVE Search: {attack_description[:50]}...")
-    
-    # Search ChromaDB for matching CVEs
     results = cve_loader.search_threat(attack_description)
-    
-    if not results:
-        return "No matching CVEs found in database."
-    
-    # Format results for the agent
-    output = "MATCHING CVE VULNERABILITIES FOUND:\n\n"
-    
-    for i, r in enumerate(results, 1):
-        output += f"Match {i}:\n"
-        output += f"  CVE ID: {r['cve_id']}\n"
-        output += f"  Severity: {r['severity']}\n"
-        output += f"  CVSS Score: {r['cvss_score']}/10\n"
-        output += f"  Description: {r['description']}\n"
-        output += f"  Relevance Score: {round(1 - r['distance'], 3)}\n"
-        output += "\n"
-    
-    output += "Use these CVEs to provide specific, expert-level threat analysis."
+    strong = [r for r in results if (1 - r['distance']) >= MIN_SCORE]
+
+    if not strong:
+        return ("No strongly matching CVE found in the knowledge base. "
+                "This behaviour may not be tied to a specific software "
+                "vulnerability; rely on the MITRE ATT&CK technique instead.")
+
+    output = "POSSIBLE CVE MATCHES (text similarity only, not proof of exploitation):\n\n"
+    for i, r in enumerate(strong, 1):
+        output += (f"Match {i}: {r['cve_id']} | {r['severity']} | "
+                   f"CVSS {r['cvss_score']} | similarity {round(1 - r['distance'], 3)}\n")
+        output += f"  {r['description'][:300]}\n\n"
     return output
 
 
-# Test the tool directly
 if __name__ == "__main__":
-    print("\n" + "="*50)
-    print("THREAT INTEL TOOL TEST")
-    print("="*50)
-    
-    # Test 1 — brute force
-    print("\n🔴 Testing brute force search:")
-    result = search_cve_database.run(
-        "47 failed login attempts on admin account from single IP"
-    )
-    print(result)
-    
-    # Test 2 — ransomware
-    print("\n💀 Testing ransomware search:")
-    result = search_cve_database.run(
-        "files being encrypted rapidly across network systems"
-    )
-    print(result)
-    
-    print("✅ Threat Intel Tool working!")
+    tests = [
+        "47 failed login attempts on admin account from single IP",
+        "files being encrypted rapidly across network systems",
+        "SQL injection in a file transfer application used to steal files",
+        "authentication bypass on a web administration console",
+    ]
+    for q in tests:
+        print("\nQUERY:", q)
+        for r in cve_loader.search_threat(q):
+            print(f"  {r['cve_id']}  similarity={round(1 - r['distance'], 3)}")

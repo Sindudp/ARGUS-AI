@@ -21,7 +21,7 @@ class ARGUSVectorStore:
         # Create or get collection — like a table in a database
         self.collection = self.client.get_or_create_collection(
             name="cve_vulnerabilities",
-            metadata={"description": "CVE vulnerability data for ARGUS-AI"}
+            metadata={"description": "CVE vulnerability data for ARGUS-AI", "hnsw:space": "cosine"}
         )
         
         # Initialize embedder for converting text to vectors

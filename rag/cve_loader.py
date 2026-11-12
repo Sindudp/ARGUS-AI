@@ -155,7 +155,7 @@ class ARGUSCVELoader:
 
     def load_into_chromadb(self):
         # Check if CVEs already loaded
-        if self.store.get_count() >= 20:
+        if self.store.get_count() > 0:
             print(f"✅ ChromaDB already has {self.store.get_count()} CVEs — skipping reload")
             return
 
