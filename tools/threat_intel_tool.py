@@ -13,7 +13,7 @@ cve_loader = ARGUSCVELoader()
 cve_loader.load_into_chromadb()
 print("✅ Threat Intel Tool: Ready!")
 
-MIN_SCORE = 0.30  # below this, we say "no strong match"
+MIN_SCORE = 0.50  # below this, we say "no strong match"
 
 
 @tool("CVE Intelligence Search")

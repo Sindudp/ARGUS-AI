@@ -1,99 +1,191 @@
 ARGUS INVESTIGATION REPORT
 ============================================================
-**Incident Investigation Report**
+**ARGUS – Senior Security Investigator Report**  
+**Date:** 2024‑01‑15 (Incident‑Day)  
+**Prepared by:** ARGUS Senior Security Investigator (20 y cyber‑forensics)  
 
-**Incident Overview**
+---
 
-This report documents the investigation of four suspicious events detected in our network security logs. The events include a brute force login attempt, a successful login attempt, a large data transfer, and a port scan detection. The purpose of this investigation is to identify the root cause of these events, determine the attacker's profile, and provide recommendations for remediation and prevention.
+## 1. Executive Summary  
 
-**Event 1: Brute Force Login Attempt**
+Three critical alerts (Severity > 70) were generated on 2024‑01‑15:
 
-* **Attack Type:** Brute Force Attack
-* **Severity Score:** 80
-* **MITRE ATT&CK Technique:** T1110 - Brute Force
+| # | Event | Severity | MITRE ATT&CK Technique |
+|---|-------|----------|------------------------|
+| 1 | Login‑attempt storm → successful admin login (192.168.1.105) | 75 | T1110.001 – Password Guessing |
+| 2 | Valid‑account usage after brute‑force (admin) | 80 | T1078 – Valid Accounts |
+| 3 | Large outbound data transfer (10.0.0.1 → 185.220.101.45, 500 MiB) | 90 | T1041 / T1567.001 – Exfiltration Over C2 / Web Services |
 
-### Attack Chain Analysis
+The following sections detail a deep‑dive investigation for each critical event, addressing the attack chain, attacker profile, blast radius, root cause, required evidence, immediate remediation, and long‑term prevention.
 
-1. **Initial Compromise**: The attacker attempted to brute force the login credentials of a user account.
-2. **Exploitation**: The attacker used a tool to automate the login attempts, trying different combinations of usernames and passwords.
-3. **Post-Exploitation**: If the attacker had been successful, they would have gained access to the user's account and potentially moved laterally across the network.
-4. **Future Actions**: The attacker may attempt to escalate privileges, install malware, or exfiltrate sensitive data.
+---
 
-### Attacker Profile Assessment
+## 2. Event 1 – Credential‑Guessing / Brute‑Force (Severity 75)
 
-The attacker is likely a **script kiddie** or a **cybercriminal** who is using automated tools to attempt to gain unauthorized access to our network. The use of a brute force attack suggests a lack of sophistication, but the potential impact of a successful attack should not be underestimated.
+### 2.1 Attack Chain  
 
-### Blast Radius Assessment
+| Phase | Observed Activity (from logs) | Interpretation |
+|-------|------------------------------|----------------|
+| **Recon** | Not captured in the provided logs. | Cannot be determined from the logs. |
+| **Initial Access – Credential Access** | 47 consecutive failed logins targeting *admin* from **192.168.1.105**, followed by a successful login from the same IP. | Attackers performed a password‑guessing (spray) attack that eventually succeeded. |
+| **Post‑Login (Lateral/Privilege Use)** | Immediate subsequent activity is recorded in Event 2 (valid‑account usage). | The successful login was used as a foothold. |
+| **Future/Outcome** | If the compromised admin session is not terminated, the attacker can: <br>• Create new accounts, <br>• Deploy malware, <br>• Initiate data exfiltration (as observed in Event 3). | Likely: attacker will continue internal reconnaissance and move laterally. |
 
-The blast radius of this attack includes all user accounts that have weak or default passwords. If the attacker is successful, they could gain access to sensitive data, systems, and applications.
+### 2.2 Attacker Profile  
 
-### Root Cause Identification
+- **Likely:** An opportunistic cyber‑criminal or script‑kiddie employing automated password‑guessing tools.  
+- **Rationale:** The attack used a high‑volume, low‑complexity technique (brute‑force) and succeeded against a privileged account, indicating the password was weak or reused. No evidence of sophisticated APT tooling is present.
 
-The root cause of this attack is likely a **weak password policy** or **inadequate account lockout policies**. This has allowed the attacker to attempt multiple login attempts without being blocked or detected.
+### 2.3 Blast Radius  
 
-### Evidence Collection Checklist
+- **Compromised Account:** *admin* (full privileged access to any systems where that credential is valid).  
+- **Potentially Affected Systems:** Any internal asset that trusts the *admin* credentials (e.g., domain controllers, management consoles).  
+- **Data at Risk:** Configuration data, credentials stored on the admin’s workstation, and any data the admin can read/write.  
+- **Users at Risk:** All users whose accounts share password policies or are reachable via the compromised admin session.
 
-* Network logs of the brute force login attempts
-* System logs of the targeted user account
-* Password policies and account lockout settings
+### 2.4 Root Cause  
 
-### Step-by-Step Remediation Plan
+- **Weak Authentication Controls:** Absence of MFA and permissive lock‑out thresholds allowed repeated guesses until a correct password was entered.  
+- **Password Policy Issue:** The *admin* password was likely guessable (common or reused).  
+- **Cannot be determined from the logs** whether the source IP is internal or compromised external host.
 
-1. **Block the source IP address**: Immediately block the source IP address (192.168.1.105) to prevent further brute force attempts.
-2. **Reset passwords**: Reset the passwords of all user accounts that were targeted by the brute force attack.
-3. **Implement rate-limiting**: Implement a rate-limiting feature to prevent future brute force attacks.
-4. **Enforce strong password policies**: Enforce strong password policies, including multi-factor authentication, to prevent weak passwords.
+### 2.5 Evidence Collection Checklist  
 
-### Prevention Recommendations
+| Item | Description |
+|------|-------------|
+| Authentication logs (Windows Event ID 4625/4624, Linux `/var/log/auth.log`) for the 47 failures and successful login. |
+| Source host forensic snapshot (disk image, volatile memory) of **192.168.1.105**. |
+| Network flow logs (NetFlow/IPFIX) covering the login window. |
+| Session activity logs from the *admin* account after successful login (command history, PowerShell/CLI logs). |
+| Existing MFA/lock‑out policy configurations. |
+| Any endpoint detection alerts on 192.168.1.105. |
 
-* **Regularly review and update password policies**: Regularly review and update password policies to ensure they are strong and effective.
-* **Implement account lockout policies**: Implement account lockout policies to prevent brute force attacks.
-* **Use multi-factor authentication**: Use multi-factor authentication to add an additional layer of security to user accounts.
+### 2.6 Remediation (Immediate, step‑by‑step)  
 
-**Event 3: Large Data Transfer**
+1. **Terminate Session** – Force logout of the *admin* session from the authentication server.  
+2. **Lock Account** – Disable the *admin* account temporarily.  
+3. **Password Reset** – Enforce a new, complex password (minimum 16 characters, random).  
+4. **Enable MFA** – Apply multi‑factor authentication to *admin* and all privileged accounts.  
+5. **Implement Account‑Lockout Policy** – Set lockout after ≤5 failed attempts within a 15‑minute window.  
+6. **Block Source IP** – Add **192.168.1.105** to firewall/IDS blocklist.  
+7. **Deploy Endpoint Detection** – Install/activate an EDR agent on the source host (if still reachable) to detect malware or credential‑stealing tools.  
+8. **Audit Privileged Access** – Review all privileged accounts for similar weak passwords or missing MFA.  
 
-* **Attack Type:** Potential Data Exfiltration
-* **Severity Score:** 90
-* **MITRE ATT&CK Technique:** T1041 - Exfiltration Over C2 Channel
+### 2.7 Prevention  
 
-### Attack Chain Analysis
+- **Policy Hardening:** Enforce MFA for all privileged accounts; enforce strong password complexity and rotation.  
+- **Login Monitoring:** Deploy a SIEM rule to trigger on >10 failed logins from a single source within 5 minutes.  
+- **Credential Leak Checks:** Integrate external breach monitoring to detect exposed passwords.  
+- **Network Segmentation:** Isolate management interfaces on a dedicated VLAN with strict ACLs.  
+- **User Awareness:** Conduct periodic phishing and credential‑security training.  
 
-1. **Initial Compromise**: The attacker gained access to our network, potentially through a compromised user account or exploit.
-2. **Exploitation**: The attacker used a command and control (C2) channel to establish a connection to the compromised system.
-3. **Post-Exploitation**: The attacker transferred a large amount of data (524288000 bytes) to the destination IP address (185.220.101.45).
-4. **Future Actions**: The attacker may attempt to exfiltrate additional data or install malware on the compromised system.
+---
 
-### Attacker Profile Assessment
+## 3. Event 2 – Valid Accounts – Post‑Brute‑Force Compromise (Severity 80)
 
-The attacker is likely an **Advanced Persistent Threat (APT) group** or a **sophisticated cybercriminal** who has gained access to our network and is attempting to exfiltrate sensitive data.
+### 3.1 Attack Chain  
 
-### Blast Radius Assessment
+| Phase | Observed Activity | Interpretation |
+|-------|-------------------|----------------|
+| **Initial Access** | Successful admin login (see Event 1). | Attacker now possesses legitimate credentials. |
+| **Execution / Lateral Movement** | Not directly logged, but subsequent large data exfiltration (Event 3) indicates the attacker used the compromised session to run tools and stage data. |
+| **Persistence** | No persistence mechanisms observed in the provided logs. | Cannot be determined from the logs. |
+| **Exfiltration** | Initiated large outbound transfer from **10.0.0.1**. | Attacker leveraged the valid admin session to authorize the transfer. |
+| **Future** | Potential for additional lateral moves, credential dumping, or ransomware deployment. | Likely: attacker will continue to explore the environment. |
 
-The blast radius of this attack includes all sensitive data that is accessible from the compromised system. If the attacker is successful, they could gain access to sensitive information, including intellectual property, customer data, or financial information.
+### 3.2 Attacker Profile  
 
-### Root Cause Identification
+- **Likely:** A cyber‑criminal who has obtained a valid privileged credential via brute‑force and is now performing opportunistic data theft.  
+- **Rationale:** The use of a legitimate admin account suggests the attacker prefers stealth over noisy exploit code.
 
-The root cause of this attack is likely a **vulnerability in the network** or a **compromised user account**. This has allowed the attacker to gain access to our network and establish a C2 channel.
+### 3.3 Blast Radius  
 
-### Evidence Collection Checklist
+- **Compromised Credential:** *admin* (full admin rights).  
+- **Systems Accessed:** Any system where the admin account is authorized – notably **10.0.0.1** (source of exfiltration) and potentially other domain‑joined assets.  
+- **Data Exfiltrated:** At least 500 MiB of data (type unknown). Additional data could be at risk.  
+- **Users Impacted:** All users whose data resides on the compromised systems; potential regulatory impact if PII/PHI was stolen.
 
-* Network logs of the data transfer
-* System logs of the compromised system
-* Destination IP address (185.220.101.45) analysis
+### 3.4 Root Cause  
 
-### Step-by-Step Remediation Plan
+- **Same root cause as Event 1:** Lack of MFA and permissive lock‑out policy allowed credential compromise.  
+- **Additional Gap:** No real‑time detection of anomalous privileged sessions (e.g., login from unusual IP/location).  
 
-1. **Contain the breach**: Immediately contain the breach by isolating the compromised system and blocking the destination IP address (185.220.101.45).
-2. **Investigate the breach**: Investigate the breach to determine the root cause and the extent of the damage.
-3. **Reset passwords**: Reset the passwords of all user accounts that have access to the compromised system.
-4. **Implement additional security controls**: Implement additional security controls, such as network segmentation and intrusion detection systems, to prevent future data exfiltration attempts.
+### 3.5 Evidence Collection Checklist  
 
-### Prevention Recommendations
+| Item | Description |
+|------|-------------|
+| Session logs for the *admin* account after successful login (process creation, file access). |
+| PowerShell/Command‑Prompt transcript logs. |
+| Windows Security Event IDs 4624 (logon) with Logon Type 2/10, 4768/4769 (Kerberos). |
+| File integrity logs on **10.0.0.1** (creation/modification timestamps). |
+| Network captures (PCAP) from **10.0.0.1** covering the exfiltration window. |
+| Credential use logs (e.g., LSASS dump indicators, Mimikatz alerts). |
+| Active Directory authentication logs for any lateral moves. |
 
-* **Regularly review and update network configurations**: Regularly review and update network configurations to ensure they are secure and up-to-date.
-* **Implement network segmentation**: Implement network segmentation to limit the attack surface and restrict access to sensitive areas of the network.
-* **Use intrusion detection systems**: Use intrusion detection systems to detect and alert on potential data exfiltration attempts.
+### 3.6 Remediation (Immediate)  
 
-**Conclusion**
+1. **Terminate All Sessions** – Force logoff of *admin* on all hosts (use `logoff` or equivalent).  
+2. **Password Reset** – Change the *admin* password and any other accounts sharing the same password.  
+3. **Revoke Tokens** – Invalidate all active authentication tokens/sessions (Kerberos tickets, JWTs).  
+4. **Quarantine Host** – Isolate **10.0.0.1** from the network (VLAN move or port shutdown).  
+5. **Block C2 Destination** – Apply firewall rule to drop outbound traffic to **185.220.101.45**.  
+6. **Collect Memory Dump** – Acquire a volatile memory image from **10.0.0.1** for malware analysis.  
+7. **Review Privileged Access** – Conduct a rapid privileged‑access review (PAM) to ensure no other accounts are compromised.  
 
-This incident investigation report highlights the importance of regularly reviewing and updating security controls to prevent brute force attacks and data exfiltration attempts. The attacks reported in this incident are likely the result of weak password policies and vulnerabilities in the network. By implementing strong password policies, account lockout policies, and network segmentation, we can prevent similar attacks in the future. Additionally, regularly reviewing and updating network configurations and using intrusion detection systems can help detect and alert on potential security incidents.
+### 3.7 Prevention  
+
+- **Privileged Access Management (PAM):** Deploy a PAM solution that enforces just‑in‑time (JIT) elevation, session recording, and automatic revocation.  
+- **Anomalous Login Detection:** Implement UEBA to flag logins from new geolocations or devices.  
+- **Credential Hygiene:** Enforce unique, high‑entropy passwords per account; implement password‑less authentication where feasible.  
+- **Continuous Monitoring:** Deploy host‑based EDR with real‑time alerting on privileged command execution and outbound data volumes.  
+
+---
+
+## 4. Event 3 – Large Outbound Data Transfer (Severity 90)
+
+### 4.1 Attack Chain  
+
+| Phase | Observed Activity | Interpretation |
+|-------|-------------------|----------------|
+| **Initial Access** | Compromised admin credentials (Events 1 & 2). |
+| **Privilege Escalation / Staging** | Attacker likely gathered data on **10.0.0.1** using the admin session. |
+| **Exfiltration** | 524,288,000 bytes transferred from **10.0.0.1** → external IP **185.220.101.45** over HTTPS (port 443). |
+| **Command & Control** | Transfer over port 443 suggests use of legitimate‑looking web traffic to blend with normal traffic. |
+| **Future** | If the external host is a C2 server, the attacker may continue to upload additional data or download malware. | Likely: continuation of data theft and possible remote command execution. |
+
+### 4.2 Attacker Profile  
+
+- **Likely:** A financially motivated cyber‑criminal focused on data theft.  
+- **Rationale:** The volume (≈500 MiB) and use of HTTPS for stealth indicate a data‑exfiltration operation rather than sabotage.
+
+### 4.3 Blast Radius  
+
+- **Source Host:** **10.0.0.1** – potentially a critical internal server (e.g., file server, application server).  
+- **Data Compromised:** Minimum 500 MiB of unspecified data; could include intellectual property, customer records, credentials.  
+- **Potential Spread:** If the attacker installed back‑doors on **10.0.0.1**, other internal hosts may be at risk.  
+- **Regulatory Impact:** Depending on data type, breach notification obligations may be triggered.
+
+### 4.4 Root Cause  
+
+- **Compromised Privileged Account** (Event 2) enabled the attacker to authenticate to **10.0.0.1** and initiate the transfer.  
+- **Lack of Egress Filtering / DLP:** No outbound data‑loss‑prevention controls prevented a large HTTPS upload.  
+- **Insufficient Network Segmentation:** The server was reachable from the compromised admin workstation without additional checks.  
+
+### 4.5 Evidence Collection Checklist  
+
+| Item | Description |
+|------|-------------|
+| Full PCAP capture from **10.0.0.1** covering the exfiltration time window. |
+| TLS handshake logs (SNI, certificate details) to identify the remote server’s identity. |
+| Sysmon/Windows Event logs for process creation (e.g., `powershell.exe`, `certutil`, custom exfil tools). |
+| File system audit logs on **10.0.0.1** (creation, read, copy events). |
+| Hashes of files transferred (if logged by application). |
+| DNS query logs for resolution of **185.220.101.45**. |
+| Memory dump of **10.0.0.1** for in‑memory malicious modules. |
+| Endpoint detection alerts (malware, suspicious network behavior). |
+
+### 4.6 Remediation (Immediate)  
+
+1. **Block Destination** – Add firewall rule to drop all traffic to **185.220.101.45** (both inbound and outbound).  
+2. **Quarantine Host** – Disconnect **10.0.0.1** from the production network; move to an isolated forensic VLAN.  
+3. **Preserve Volatile
