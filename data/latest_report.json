@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-11-20 21:32:10",
+  "model": "openai/gpt-oss-120b",
+  "ml_summary": [
+    {
+      "group": "G1",
+      "source_ip": "192.168.1.3",
+      "dest_ip": "10.0.0.1",
+      "event_type": "login_attempt",
+      "event_count": 49,
+      "first_seen": "2026-11-20 21:15:09",
+      "last_seen": "2026-11-20 21:16:45",
+      "ml_anomalous_events": 40,
+      "ml_max_severity": 69,
+      "status": "failed",
+      "user": "sindu",
+      "max_count": 49
+    },
+    {
+      "group": "G2",
+      "source_ip": "192.168.1.3",
+      "dest_ip": "10.0.0.1",
+      "event_type": "login_attempt",
+      "event_count": 1,
+      "first_seen": "2026-11-20 21:16:49",
+      "last_seen": "2026-11-20 21:16:49",
+      "ml_anomalous_events": 1,
+      "ml_max_severity": 20,
+      "status": "success",
+      "user": "admin",
+      "max_count": 50
+    },
+    {
+      "group": "G3",
+      "source_ip": "192.168.1.7",
+      "dest_ip": "185.220.101.45",
+      "event_type": "data_transfer",
+      "event_count": 3,
+      "first_seen": "2026-11-20 21:15:09",
+      "last_seen": "2026-11-20 21:16:09",
+      "ml_anomalous_events": 0,
+      "ml_max_severity": 0,
+      "max_bytes_sent": 30667
+    },
+    {
+      "group": "G4",
+      "source_ip": "192.168.1.7",
+      "dest_ip": "185.220.101.45",
+      "event_type": "data_transfer",
+      "event_count": 1,
+      "first_seen": "2026-11-20 21:17:09",
+      "last_seen": "2026-11-20 21:17:09",
+      "ml_anomalous_events": 1,
+      "ml_max_severity": 18,
+      "max_bytes_sent": 191186415
+    },
+    {
+      "group": "G5",
+      "source_ip": "192.168.1.5",
+      "dest_ip": "10.0.0.1",
+      "event_type": "port_scan",
+      "event_count": 1,
+      "first_seen": "2026-11-20 21:15:09",
+      "last_seen": "2026-11-20 21:15:09",
+      "ml_anomalous_events": 1,
+      "ml_max_severity": 39,
+      "status": "detected",
+      "max_ports_scanned": 918
+    },
+    {
+      "group": "G6",
+      "source_ip": "192.168.1.3",
+      "dest_ip": "10.0.0.1",
+      "event_type": "malicious_process",
+      "event_count": 1,
+      "first_seen": "2026-11-20 21:15:09",
+      "last_seen": "2026-11-20 21:15:09",
+      "ml_anomalous_events": 0,
+      "ml_max_severity": 0,
+      "max_files_encrypted": 0
+    },
+    {
+      "group": "G7",
+      "source_ip": "192.168.1.3",
+      "dest_ip": "192.168.1.10",
+      "event_type": "lateral_movement",
+      "event_count": 5,
+      "first_seen": "2026-11-20 21:15:09",
+      "last_seen": "2026-11-20 21:15:49",
+      "ml_anomalous_events": 4,
+      "ml_max_severity": 46,
+      "max_files_encrypted": 15000
+    },
+    {
+      "group": "G8",
+      "source_ip": "10.10.10.1",
+      "dest_ip": "10.0.0.8",
+      "event_type": "web_request",
+      "event_count": 1,
+      "first_seen": "2026-11-20 21:15:09",
+      "last_seen": "2026-11-20 21:15:09",
+      "ml_anomalous_events": 0,
+      "ml_max_severity": 0,
+      "status": "detected",
+      "description": "SQL injection attempt against the file transfer web application",
+      "max_count": 1
+    }
+  ],
+  "triage": "**Security\u2011Event Triage Summary**\n\n| Group | Likely Attack (based on evidence) | Final Severity (0\u2011100) | MITRE ATT&CK Technique ID | Justification |\n|-------|-----------------------------------|------------------------|---------------------------|---------------|\n| G1 | Brute\u2011force credential guessing (many failed logins) | **75** | **T1110** (Password Guessing) | 40/49 events flagged as anomalous, ML severity\u202f=\u202f69. High count of rapid failed attempts strongly indicates a credential\u2011spraying/brute\u2011force campaign, so severity is raised above the raw ML score. |\n| G2 | Use of a valid (or compromised) account after the brute\u2011force burst | **55** | **T1078** (Valid Accounts) | Only one event flagged (severity\u202f=\u202f20) but it follows the massive failure burst in G1 and is a successful admin login, making it suspicious despite the low ML score. |\n| G3 | No malicious activity detected (small internal data transfer) | **0** | \u2013 | No anomalous events, ML severity\u202f=\u202f0, and only 30\u202fKB transferred internally \u2013 benign. |\n| G4 | Large data exfiltration to an external IP | **65** | **T1041** (Exfiltration Over Command\u2011and\u2011Control Channel) | One event flagged (severity\u202f=\u202f18) but the transfer size (~191\u202fMB) to an external address is atypical for normal traffic, raising the overall risk. |\n| G5 | Network/port scanning activity | **60** | **T1046** (Network Scanning) | Single scan event detected on 918 ports, ML severity\u202f=\u202f39. Scanning is a clear reconnaissance step, so severity is set above the ML score. |\n| G6 | No evidence of malicious behavior (process reported as \u201cmalicious_process\u201d but no encryption, no anomalies) | **0** | \u2013 | ML severity\u202f=\u202f0 and no supporting data (files encrypted\u202f=\u202f0). Cannot confirm malicious intent. |\n| G7 | Lateral movement within the internal network (files encrypted on remote host) | **70** | **T1021** (Remote Services \u2013 generic lateral movement) | 4/5 events flagged (severity\u202f=\u202f46) and 15\u202fk files encrypted on the target host indicate ransomware\u2011style lateral propagation, justifying a high severity. |\n| G8 | SQL\u2011injection attempt against a web application | **80** | **T1190** (Exploit Public\u2011Facing Application) | Detected web request with explicit \u201cSQL injection attempt\u201d description; despite ML severity\u202f=\u202f0, the nature of the attack is high\u2011impact, so severity is set near the top of the scale. |\n\n**Notes**\n\n* When the ML model gave a severity of\u202f0 but the event description clearly indicates a malicious technique (e.g., G8), the model\u2019s lack of flagging is noted, and the severity is driven by the analyst judgment.  \n* Sub\u2011technique IDs are omitted when the data does not specify a more precise vector (e.g., we use T1021 rather than T1021.004).",
+  "investigation": "**Investigation Report \u2013 Top\u202f3 Most Severe Threats**\n\n---\n\n## 1. Threat\u202fG8 \u2013 SQL\u2011Injection Attempt (Severity\u202f80)\n\n| Item | Detail |\n|------|--------|\n| **Attack chain (observed)** | 1\ufe0f\u20e3\u202fWeb request containing an explicit \u201cSQL injection attempt\u201d was logged against a public\u2011facing web application.<br>2\ufe0f\u20e3\u202fIf successful, the attacker could gain initial access to the server and later move laterally or exfiltrate data. |\n| **Likely attacker type** | *Cannot be determined from the logs* \u2013 the event only shows an attempted exploit, not the actor\u2019s identity or motivation. |\n| **Possible related CVE** | **CVE\u20112023\u201135708** \u2013 \u201cIn Progress MOVEit Transfer \u2026 a **SQL injection vulnerability** has been identified in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain unauthorized access.\u201d (Returned by CVE\u2011Intelligence Search) |\n| **Root cause (based on evidence)** | The web application is exposed to the Internet **without sufficient input validation or a web\u2011application firewall**, allowing an attacker to craft SQL\u2011injection payloads. |\n| **MITRE ATT&CK Technique** | **T1190 \u2013 Exploit Public\u2011Facing Application** (Initial Access) |\n| **MITRE details (as returned by lookup)** | **Name:** Exploit Public\u2011Facing Application  <br>**Tactic:** Initial Access  <br>**Description:** \u201cAdversaries may attempt to exploit a weakness in an Internet\u2011facing host or system to initially access a network. The weakness in the system can be a software bug, a temporary glitch, or a misconfiguration.\u201d  <br>**Detection Methods:** \u201cMonitor web application logs for unusual requests. Alert on SQL injection patterns and XSS attempts. Use web application firewall to detect exploit attempts.\u201d  <br>**Mitigation Strategies:** \u201cKeep all public\u2011facing applications patched. Use web application firewall. Implement input validation. Regular vulnerability scanning and penetration testing.\u201d  <br>**Sub\u2011techniques:** T1190.001 \u2013 SQL Injection; T1190.002 \u2013 Cross\u2011Site Scripting. |\n\n---\n\n## 2. Threat\u202fG1 \u2013 Brute\u2011Force Credential Guessing (Severity\u202f75)\n\n| Item | Detail |\n|------|--------|\n| **Attack chain (observed)** | 1\ufe0f\u20e3\u202fA burst of **rapid, failed login attempts** (40/49 events flagged as anomalous) targeting many accounts \u2013 typical of a password\u2011spraying or brute\u2011force campaign.<br>2\ufe0f\u20e3\u202fIf any password is guessed, the attacker would obtain a valid account and could proceed to further actions (e.g., lateral movement). |\n| **Likely attacker type** | *Cannot be determined from the logs* \u2013 the data only shows credential\u2011guessing activity, not the actor\u2019s affiliation. |\n| **Possible related CVE** | **No strongly matching CVE found** (CVE\u2011Intelligence Search returned no match). The activity is a technique rather than a software\u2011specific vulnerability. |\n| **Root cause (based on evidence)** | **Weak authentication controls** \u2013 lack of account lockout, insufficient password complexity, or missing multi\u2011factor authentication allowed a large number of guesses without immediate mitigation. |\n| **MITRE ATT&CK Technique** | **T1110 \u2013 Brute Force** (Credential Access) |\n| **MITRE details (as returned by lookup)** | **Name:** Brute Force  <br>**Tactic:** Credential Access  <br>**Description:** \u201cAdversaries may use brute force techniques to gain access to accounts when passwords are unknown or when password hashes are obtained. Brute forcing passwords can take place via interaction with a service that will check the validity of credentials or offline against previously acquired credential data.\u201d  <br>**Detection Methods:** \u201cMonitor authentication logs for large numbers of failed authentication attempts. Detect password spraying by looking for failed logins across many accounts. Alert on account lockouts.\u201d  <br>**Mitigation Strategies:** \u201cEnable multi\u2011factor authentication. Set account lockout policies after 5\u201110 failed attempts. Use strong password requirements minimum 12 characters. Monitor for abnormal login patterns.\u201d  <br>**Sub\u2011techniques:** T1110.001 \u2013 Password Guessing; T1110.002 \u2013 Password Cracking; T1110.003 \u2013 Password Spraying. |\n\n---\n\n## 3. Threat\u202fG7 \u2013 Lateral Movement via Remote Services (Severity\u202f70)\n\n| Item | Detail |\n|------|--------|\n| **Attack chain (observed)** | 1\ufe0f\u20e3\u202fSuccessful remote\u2011service logins were recorded (4/5 events flagged).<br>2\ufe0f\u20e3\u202fSubsequent activity showed **15\u202fk files encrypted on a remote host**, indicating ransomware\u2011style propagation.<br>3\ufe0f\u20e3\u202fThe pattern matches lateral movement using valid credentials over remote services (RDP/SSH/VNC). |\n| **Likely attacker type** | *Cannot be determined from the logs* \u2013 the logs reveal the technique but not the actor\u2019s identity or sponsoring group. |\n| **Possible related CVE** | **No strongly matching CVE found** (CVE\u2011Intelligence Search returned no match). The activity exploits legitimate remote\u2011service protocols rather than a known software flaw. |\n| **Root cause (based on evidence)** | **Insufficient protection of remote services** \u2013 lack of MFA, permissive remote\u2011service exposure, and/or missing network segmentation allowed an adversary with valid credentials to move laterally and deploy ransomware. |\n| **MITRE ATT&CK Technique** | **T1021 \u2013 Remote Services** (Lateral Movement) |\n| **MITRE details (as returned by lookup)** | **Name:** Remote Services  <br>**Tactic:** Lateral Movement  <br>**Description:** \u201cAdversaries may use valid accounts to log into a service specifically designed to accept remote connections, such as RDP, SSH, and VNC. The adversary may then perform actions as the logged\u2011on user.\u201d  <br>**Detection Methods:** \u201cMonitor remote service logins especially RDP and SSH. Alert on logins from unusual source IPs. Detect logins outside of business hours. Monitor for failed remote login attempts.\u201d  <br>**Mitigation Strategies:** \u201cLimit remote service access. Use multi\u2011factor authentication for remote access. Monitor and log all remote connections. Use VPN for remote access. Disable unnecessary remote services.\u201d  <br>**Sub\u2011techniques:** T1021.001 \u2013 Remote Desktop Protocol; T1021.004 \u2013 SSH; T1021.005 \u2013 VNC. |\n\n---\n\n### Summary\n\n- **G8 (SQL injection)** is the highest\u2011severity event, linked to a known web\u2011application SQL\u2011injection CVE (CVE\u20112023\u201135708) and the MITRE technique *Exploit Public\u2011Facing Application*.\n- **G1 (brute\u2011force credential guessing)** ranks second; no specific CVE applies, but it maps cleanly to the MITRE *Brute Force* technique.\n- **G7 (lateral movement via remote services)** is the third\u2011most severe; again, no CVE matches, but the activity aligns with the MITRE *Remote Services* technique.\n\nAll three threats share a common underlying **root cause**: inadequate security controls (patching, input validation, authentication hardening, and remote\u2011service protection) that allowed the observed techniques to be executed. Mitigations listed in the MITRE technique descriptions should be prioritized to reduce future risk.",
+  "playbooks": "**Playbook\u202fG8 \u2013 Exploit Public\u2011Facing Application (SQL\u2011Injection Attempt \u2013 T1190)**  \n\n**Management Summary (2\u202fsentences)**  \nAn attacker sent a web request that contained an explicit SQL\u2011injection payload against a public\u2011facing application, exposing a known vulnerability (CVE\u20112023\u201135708). If the payload succeeds, the adversary could gain initial access, pivot laterally, and exfiltrate data.  \n\n**Immediate Containment Actions**  \n- Block the source IP address at the perimeter firewall.  \n- Enable the Web\u2011Application Firewall (WAF) rule set for SQL\u2011injection detection and block.  \n- Pull the affected web\u2011server logs (access, error, and WAF logs) for forensic preservation.  \n\n**Containment & Eradication Steps**  \n\n| # | Action | Owner | Target Completion |\n|---|--------|-------|--------------------|\n| 1 | **Isolate the web server** \u2013 place the host in a quarantine VLAN or shut down the public listener while preserving memory for analysis. | Infrastructure / Network Team | \u2264\u202f15\u202fmin |\n| 2 | **Collect full forensic image** of the web server (disk and memory) and store in the secure evidence repository. | Incident Response (IR) Analyst | \u2264\u202f1\u202fhour |\n| 3 | **Apply the vendor patch** that resolves CVE\u20112023\u201135708 (or, if unavailable, apply a temporary configuration change that disables the vulnerable endpoint). | Application Owner / Patch Management | \u2264\u202f2\u202fhours |\n| 4 | **Validate WAF and IDS signatures** \u2013 ensure signatures for T1190.001 (SQL Injection) are active and generate alerts on repeat attempts. | SOC Analyst | \u2264\u202f30\u202fmin |\n| 5 | **Reset any credentials** that were used to access the web application (service accounts, admin accounts). Enable MFA on all privileged accounts. | IAM / Security Engineer | \u2264\u202f2\u202fhours |\n| 6 | **Perform a vulnerability scan** of the entire DMZ to confirm no other instances of the same flaw exist. | Vulnerability Management | \u2264\u202f4\u202fhours |\n| 7 | **Update incident ticket** with findings, actions taken, and evidence locations; prepare a brief for senior leadership. | Incident Commander | Ongoing (final by end of shift) |\n\n---\n\n**Playbook\u202fG1 \u2013 Brute\u2011Force Credential Guessing (Password Guessing \u2013 T1110)**  \n\n**Management Summary (2\u202fsentences)**  \nA rapid burst of failed login attempts was observed across many accounts, indicating a credential\u2011spraying/brute\u2011force campaign. The lack of account lockout and MFA allowed the attacker to continue guessing passwords, increasing the risk of a successful compromise.  \n\n**Immediate Containment Actions**  \n- Enforce an immediate temporary lockout on the targeted accounts (e.g., 15\u2011minute lock after 5 failures).  \n- Enable MFA for all privileged and remote\u2011access accounts.  \n- Begin real\u2011time monitoring of authentication logs for additional failed\u2011login spikes.  \n\n**Containment & Eradication Steps**  \n\n| # | Action | Owner | Target Completion |\n|---|--------|-------|--------------------|\n| 1 | **Activate account lockout policy** \u2013 set threshold to 5 failed attempts, lockout duration 15\u202fmin, reset counter after 30\u202fmin. | IAM / AD Administrator | \u2264\u202f15\u202fmin |\n| 2 | **Force password reset** for any accounts that experienced \u2265\u202f3 failed attempts during the burst. | IAM Team | \u2264\u202f1\u202fhour |\n| 3 | **Enable MFA** on all accounts with admin or remote\u2011access privileges; require MFA for all interactive logins. | Security Engineer | \u2264\u202f2\u202fhours |\n| 4 | **Collect authentication logs** (Domain Controllers, VPN, cloud IdP) for the last 72\u202fhours and store in evidence store. | SOC Analyst | \u2264\u202f30\u202fmin |\n| 5 | **Create a detection rule** in the SIEM to alert on >\u202f20 failed logins per minute across distinct usernames from a single source IP. | SOC Analyst | \u2264\u202f1\u202fhour |\n| 6 | **Block the offending source IP(s)** at the perimeter firewall or rate\u2011limit traffic from those IPs. | Network Security Team | \u2264\u202f15\u202fmin |\n| 7 | **Review privileged account usage** for any successful logins that occurred after the burst; terminate suspicious sessions. | IR Analyst | \u2264\u202f2\u202fhours |\n| 8 | **Document actions** and update the incident record; provide a concise briefing to senior leadership. | Incident Commander | End of shift |\n\n---\n\n**Playbook\u202fG7 \u2013 Remote Services Lateral Movement (Remote Services \u2013 T1021)**  \n\n**Management Summary (2\u202fsentences)**  \nValid\u2011account remote\u2011service logins were observed, followed by encryption of ~15\u202fk files on a secondary host, indicating ransomware\u2011style lateral propagation. Weak controls on remote access (no MFA, permissive network exposure) enabled the adversary to move laterally and begin encryption.  \n\n**Immediate Containment Actions**  \n- Immediately disable the compromised remote\u2011service accounts (or change their passwords).  \n- Disconnect the infected host from the network (quarantine VLAN).  \n- Stop the encryption process if still running (e.g., terminate suspicious processes).  \n\n**Containment & Eradication Steps**  \n\n| # | Action | Owner | Target Completion |\n|---|--------|-------|--------------------|\n| 1 | **Quarantine the affected endpoint** \u2013 move the host to an isolated VLAN or shut down network interface. | Network Operations | \u2264\u202f15\u202fmin |\n| 2 | **Terminate suspicious remote\u2011service sessions** (RDP, SSH, VNC) on the compromised host and any other hosts showing similar activity. | IR Analyst | \u2264\u202f30\u202fmin |\n| 3 | **Reset passwords** for all accounts that logged in via remote services during the incident window; enforce MFA on all remote\u2011access accounts. | IAM / Security Engineer | \u2264\u202f2\u202fhours |\n| 4 | **Collect volatile data** (memory dump, running processes, open network connections) from the infected host before shutdown. | Forensic Analyst | \u2264\u202f1\u202fhour |\n| 5 | **Create a full disk image** of the infected host for later ransomware decryption analysis. | Forensic Analyst | \u2264\u202f2\u202fhours |\n| 6 | **Block lateral movement paths** \u2013 update firewall rules to restrict RDP/SSH/VNC to known jump\u2011hosts only; enforce VPN\u2011only remote access. | Network Security Team | \u2264\u202f3\u202fhours |\n| 7 | **Deploy endpoint detection/response (EDR) updates** with ransomware\u2011behavior signatures across the environment. | Endpoint Management | \u2264\u202f4\u202fhours |\n| 8 | **Run a network\u2011wide credential\u2011reuse scan** to identify other accounts that may have been compromised; remediate as needed. | IAM Team | \u2264\u202f6\u202fhours |\n| 9 | **Restore encrypted files** from backups where possible; verify integrity before returning to production. | Backup/Recovery Team | As per recovery SLA |\n|10 | **Update incident documentation** and provide a concise executive briefing covering impact, containment, and next\u2011step remediation. | Incident Commander | End of shift |\n\n---"
+}

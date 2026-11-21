@@ -1,53 +1,35 @@
+# agents/argus_pipeline.py
+# Purpose: the full ARGUS-AI pipeline
+#   logs -> Isolation Forest scores -> Triage -> Investigation (CVE + MITRE tools) -> Response
+# The final report is saved to data/latest_report.json and shown on the dashboard.
+
 import os
 import sys
 import json
-from collections import defaultdict
 from dotenv import load_dotenv
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(ROOT)
 
 import tools.groq_patch  # fixes the Groq + CrewAI cache_breakpoint error
 
 from crewai import Agent, Task, Crew, LLM
 from tools.threat_intel_tool import search_cve_database
 from tools.mitre_tool import lookup_mitre_technique
+from tools.anomaly_detector import ARGUSAnomalyDetector
+from tools.log_summary import summarize_logs, task_text, save_report
 
 load_dotenv()
 
+MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-oss-120b")
 llm = LLM(
-    model=f"groq/{os.getenv('MODEL_NAME', 'openai/gpt-oss-120b')}",
+    model=f"groq/{MODEL_NAME}",
     api_key=os.getenv("GROQ_API_KEY"),
     temperature=0.2
 )
 
-
-def summarize_logs(logs):
-    # Group the raw events into a few lines the LLM can handle
-    groups = defaultdict(list)
-    for log in logs:
-        key = (log.get("attack_type", "UNKNOWN"), log["source_ip"])
-        groups[key].append(log)
-
-    summary = []
-    for (attack_type, source_ip), items in groups.items():
-        entry = {
-            "attack_type": attack_type,
-            "source_ip": source_ip,
-            "dest_ip": items[0]["dest_ip"],
-            "event_type": items[0]["event_type"],
-            "event_count": len(items),
-            "first_seen": items[0]["timestamp"],
-            "last_seen": items[-1]["timestamp"],
-        }
-        for field in ("bytes_sent", "ports_scanned", "files_encrypted"):
-            values = [i[field] for i in items if field in i]
-            if values:
-                entry["max_" + field] = max(values)
-        summary.append(entry)
-    return summary
-
-
-log_path = "data/generated_logs.json"
+# ---------------- LOAD LOGS AND RUN THE ML MODEL ----------------
+log_path = os.path.join(ROOT, "data", "generated_logs.json")
 if not os.path.exists(log_path):
     print("Run python data/log_generator.py first!")
     sys.exit()
@@ -55,15 +37,17 @@ if not os.path.exists(log_path):
 with open(log_path, encoding="utf-8") as f:
     raw_logs = json.load(f)
 
-summary = summarize_logs(raw_logs)
-print(f"Raw events: {len(raw_logs)} -> Summarized into {len(summary)} groups")
+detector = ARGUSAnomalyDetector()
+detector.train()
+summary = summarize_logs(raw_logs, detector)
+print(f"Raw events: {len(raw_logs)} -> {len(summary)} groups (every event scored by the ML model)")
 
 # ---------------- AGENTS ----------------
 triage_agent = Agent(
     role="ARGUS Triage Specialist",
     goal="Classify security events and score their severity from 0 to 100",
     backstory="You are a SOC analyst with 15 years of experience. "
-              "You classify attacks quickly and assign MITRE ATT&CK technique IDs.",
+              "You classify attacks from the evidence and assign MITRE ATT&CK technique IDs.",
     llm=llm,
     verbose=True
 )
@@ -90,23 +74,26 @@ response_agent = Agent(
 
 # ---------------- TASKS ----------------
 triage_task = Task(
-    description=f"""Here is a summary of security events:
+    description=f"""Here are grouped security events. 'ml_max_severity' is the 0-100 score from the
+Isolation Forest model and 'ml_anomalous_events' is how many events in the group it flagged.
 {json.dumps(summary, indent=2)}
 
-For each group give: attack type, severity score (0-100),
-and the MITRE ATT&CK technique ID (for example T1110).
+For each group give: what attack it most likely is (from the evidence), a final severity score
+(0-100) that you justify using the ML score and the data, and the MITRE ATT&CK technique ID
+(for example T1110). If a group is clearly malicious but the ML score is 0, say that the ML model
+did not flag it.
 
 RULES:
-- Use only the fields shown in the summaries. Do not assume a protocol, tool or product (for example SMB, RDP or Mimikatz) unless it appears in the data.
+- Use only the fields shown. Do not assume a protocol, tool or product (for example SMB, RDP or Mimikatz) unless it appears in the data.
 - If the data does not show which protocol was used, give the general technique ID (for example T1021) and not a sub-technique.""",
-    expected_output="A table of threats with severity and MITRE technique ID",
+    expected_output="A table of groups with attack type, final severity and MITRE technique ID",
     agent=triage_agent
 )
 
 investigation_task = Task(
     description="""From the triage result pick the 3 MOST SEVERE threats.
 For each one:
-1. Call 'CVE Intelligence Search' ONCE, describing the weakness an attacker would exploit. If it returns 'No strongly matching CVE found', do not search again for that threat.
+1. Call 'CVE Intelligence Search' ONCE, describing the weakness an attacker would exploit (if the group has a 'description', use it). If it returns 'No strongly matching CVE found', do not search again for that threat.
 2. Call 'MITRE ATT&CK Lookup' ONCE with the technique ID.
 3. Write: attack chain, likely attacker type, possible related CVE (or 'No strongly matching CVE found'), and root cause.
 
@@ -140,7 +127,17 @@ crew = Crew(
 
 result = crew.kickoff()
 
-with open("data/day10_report.txt", "w", encoding="utf-8") as f:
-    f.write(str(result))
+report = save_report(
+    os.path.join(ROOT, "data", "latest_report.json"),
+    summary,
+    task_text(triage_task),
+    task_text(investigation_task),
+    task_text(response_task) or str(result),
+    MODEL_NAME,
+)
 
-print("\nReport saved to data/day10_report.txt")
+with open(os.path.join(ROOT, "data", "latest_report.txt"), "w", encoding="utf-8") as f:
+    f.write("TRIAGE\n" + report["triage"] + "\n\nINVESTIGATION\n" + report["investigation"]
+            + "\n\nPLAYBOOKS\n" + report["playbooks"])
+
+print("\nReport saved to data/latest_report.json (the dashboard reads this file)")

@@ -1,0 +1,147 @@
+TRIAGE
+**Security‑Event Triage Summary**
+
+| Group | Likely Attack (based on evidence) | Final Severity (0‑100) | MITRE ATT&CK Technique ID | Justification |
+|-------|-----------------------------------|------------------------|---------------------------|---------------|
+| G1 | Brute‑force credential guessing (many failed logins) | **75** | **T1110** (Password Guessing) | 40/49 events flagged as anomalous, ML severity = 69. High count of rapid failed attempts strongly indicates a credential‑spraying/brute‑force campaign, so severity is raised above the raw ML score. |
+| G2 | Use of a valid (or compromised) account after the brute‑force burst | **55** | **T1078** (Valid Accounts) | Only one event flagged (severity = 20) but it follows the massive failure burst in G1 and is a successful admin login, making it suspicious despite the low ML score. |
+| G3 | No malicious activity detected (small internal data transfer) | **0** | – | No anomalous events, ML severity = 0, and only 30 KB transferred internally – benign. |
+| G4 | Large data exfiltration to an external IP | **65** | **T1041** (Exfiltration Over Command‑and‑Control Channel) | One event flagged (severity = 18) but the transfer size (~191 MB) to an external address is atypical for normal traffic, raising the overall risk. |
+| G5 | Network/port scanning activity | **60** | **T1046** (Network Scanning) | Single scan event detected on 918 ports, ML severity = 39. Scanning is a clear reconnaissance step, so severity is set above the ML score. |
+| G6 | No evidence of malicious behavior (process reported as “malicious_process” but no encryption, no anomalies) | **0** | – | ML severity = 0 and no supporting data (files encrypted = 0). Cannot confirm malicious intent. |
+| G7 | Lateral movement within the internal network (files encrypted on remote host) | **70** | **T1021** (Remote Services – generic lateral movement) | 4/5 events flagged (severity = 46) and 15 k files encrypted on the target host indicate ransomware‑style lateral propagation, justifying a high severity. |
+| G8 | SQL‑injection attempt against a web application | **80** | **T1190** (Exploit Public‑Facing Application) | Detected web request with explicit “SQL injection attempt” description; despite ML severity = 0, the nature of the attack is high‑impact, so severity is set near the top of the scale. |
+
+**Notes**
+
+* When the ML model gave a severity of 0 but the event description clearly indicates a malicious technique (e.g., G8), the model’s lack of flagging is noted, and the severity is driven by the analyst judgment.  
+* Sub‑technique IDs are omitted when the data does not specify a more precise vector (e.g., we use T1021 rather than T1021.004).
+
+INVESTIGATION
+**Investigation Report – Top 3 Most Severe Threats**
+
+---
+
+## 1. Threat G8 – SQL‑Injection Attempt (Severity 80)
+
+| Item | Detail |
+|------|--------|
+| **Attack chain (observed)** | 1️⃣ Web request containing an explicit “SQL injection attempt” was logged against a public‑facing web application.<br>2️⃣ If successful, the attacker could gain initial access to the server and later move laterally or exfiltrate data. |
+| **Likely attacker type** | *Cannot be determined from the logs* – the event only shows an attempted exploit, not the actor’s identity or motivation. |
+| **Possible related CVE** | **CVE‑2023‑35708** – “In Progress MOVEit Transfer … a **SQL injection vulnerability** has been identified in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain unauthorized access.” (Returned by CVE‑Intelligence Search) |
+| **Root cause (based on evidence)** | The web application is exposed to the Internet **without sufficient input validation or a web‑application firewall**, allowing an attacker to craft SQL‑injection payloads. |
+| **MITRE ATT&CK Technique** | **T1190 – Exploit Public‑Facing Application** (Initial Access) |
+| **MITRE details (as returned by lookup)** | **Name:** Exploit Public‑Facing Application  <br>**Tactic:** Initial Access  <br>**Description:** “Adversaries may attempt to exploit a weakness in an Internet‑facing host or system to initially access a network. The weakness in the system can be a software bug, a temporary glitch, or a misconfiguration.”  <br>**Detection Methods:** “Monitor web application logs for unusual requests. Alert on SQL injection patterns and XSS attempts. Use web application firewall to detect exploit attempts.”  <br>**Mitigation Strategies:** “Keep all public‑facing applications patched. Use web application firewall. Implement input validation. Regular vulnerability scanning and penetration testing.”  <br>**Sub‑techniques:** T1190.001 – SQL Injection; T1190.002 – Cross‑Site Scripting. |
+
+---
+
+## 2. Threat G1 – Brute‑Force Credential Guessing (Severity 75)
+
+| Item | Detail |
+|------|--------|
+| **Attack chain (observed)** | 1️⃣ A burst of **rapid, failed login attempts** (40/49 events flagged as anomalous) targeting many accounts – typical of a password‑spraying or brute‑force campaign.<br>2️⃣ If any password is guessed, the attacker would obtain a valid account and could proceed to further actions (e.g., lateral movement). |
+| **Likely attacker type** | *Cannot be determined from the logs* – the data only shows credential‑guessing activity, not the actor’s affiliation. |
+| **Possible related CVE** | **No strongly matching CVE found** (CVE‑Intelligence Search returned no match). The activity is a technique rather than a software‑specific vulnerability. |
+| **Root cause (based on evidence)** | **Weak authentication controls** – lack of account lockout, insufficient password complexity, or missing multi‑factor authentication allowed a large number of guesses without immediate mitigation. |
+| **MITRE ATT&CK Technique** | **T1110 – Brute Force** (Credential Access) |
+| **MITRE details (as returned by lookup)** | **Name:** Brute Force  <br>**Tactic:** Credential Access  <br>**Description:** “Adversaries may use brute force techniques to gain access to accounts when passwords are unknown or when password hashes are obtained. Brute forcing passwords can take place via interaction with a service that will check the validity of credentials or offline against previously acquired credential data.”  <br>**Detection Methods:** “Monitor authentication logs for large numbers of failed authentication attempts. Detect password spraying by looking for failed logins across many accounts. Alert on account lockouts.”  <br>**Mitigation Strategies:** “Enable multi‑factor authentication. Set account lockout policies after 5‑10 failed attempts. Use strong password requirements minimum 12 characters. Monitor for abnormal login patterns.”  <br>**Sub‑techniques:** T1110.001 – Password Guessing; T1110.002 – Password Cracking; T1110.003 – Password Spraying. |
+
+---
+
+## 3. Threat G7 – Lateral Movement via Remote Services (Severity 70)
+
+| Item | Detail |
+|------|--------|
+| **Attack chain (observed)** | 1️⃣ Successful remote‑service logins were recorded (4/5 events flagged).<br>2️⃣ Subsequent activity showed **15 k files encrypted on a remote host**, indicating ransomware‑style propagation.<br>3️⃣ The pattern matches lateral movement using valid credentials over remote services (RDP/SSH/VNC). |
+| **Likely attacker type** | *Cannot be determined from the logs* – the logs reveal the technique but not the actor’s identity or sponsoring group. |
+| **Possible related CVE** | **No strongly matching CVE found** (CVE‑Intelligence Search returned no match). The activity exploits legitimate remote‑service protocols rather than a known software flaw. |
+| **Root cause (based on evidence)** | **Insufficient protection of remote services** – lack of MFA, permissive remote‑service exposure, and/or missing network segmentation allowed an adversary with valid credentials to move laterally and deploy ransomware. |
+| **MITRE ATT&CK Technique** | **T1021 – Remote Services** (Lateral Movement) |
+| **MITRE details (as returned by lookup)** | **Name:** Remote Services  <br>**Tactic:** Lateral Movement  <br>**Description:** “Adversaries may use valid accounts to log into a service specifically designed to accept remote connections, such as RDP, SSH, and VNC. The adversary may then perform actions as the logged‑on user.”  <br>**Detection Methods:** “Monitor remote service logins especially RDP and SSH. Alert on logins from unusual source IPs. Detect logins outside of business hours. Monitor for failed remote login attempts.”  <br>**Mitigation Strategies:** “Limit remote service access. Use multi‑factor authentication for remote access. Monitor and log all remote connections. Use VPN for remote access. Disable unnecessary remote services.”  <br>**Sub‑techniques:** T1021.001 – Remote Desktop Protocol; T1021.004 – SSH; T1021.005 – VNC. |
+
+---
+
+### Summary
+
+- **G8 (SQL injection)** is the highest‑severity event, linked to a known web‑application SQL‑injection CVE (CVE‑2023‑35708) and the MITRE technique *Exploit Public‑Facing Application*.
+- **G1 (brute‑force credential guessing)** ranks second; no specific CVE applies, but it maps cleanly to the MITRE *Brute Force* technique.
+- **G7 (lateral movement via remote services)** is the third‑most severe; again, no CVE matches, but the activity aligns with the MITRE *Remote Services* technique.
+
+All three threats share a common underlying **root cause**: inadequate security controls (patching, input validation, authentication hardening, and remote‑service protection) that allowed the observed techniques to be executed. Mitigations listed in the MITRE technique descriptions should be prioritized to reduce future risk.
+
+PLAYBOOKS
+**Playbook G8 – Exploit Public‑Facing Application (SQL‑Injection Attempt – T1190)**  
+
+**Management Summary (2 sentences)**  
+An attacker sent a web request that contained an explicit SQL‑injection payload against a public‑facing application, exposing a known vulnerability (CVE‑2023‑35708). If the payload succeeds, the adversary could gain initial access, pivot laterally, and exfiltrate data.  
+
+**Immediate Containment Actions**  
+- Block the source IP address at the perimeter firewall.  
+- Enable the Web‑Application Firewall (WAF) rule set for SQL‑injection detection and block.  
+- Pull the affected web‑server logs (access, error, and WAF logs) for forensic preservation.  
+
+**Containment & Eradication Steps**  
+
+| # | Action | Owner | Target Completion |
+|---|--------|-------|--------------------|
+| 1 | **Isolate the web server** – place the host in a quarantine VLAN or shut down the public listener while preserving memory for analysis. | Infrastructure / Network Team | ≤ 15 min |
+| 2 | **Collect full forensic image** of the web server (disk and memory) and store in the secure evidence repository. | Incident Response (IR) Analyst | ≤ 1 hour |
+| 3 | **Apply the vendor patch** that resolves CVE‑2023‑35708 (or, if unavailable, apply a temporary configuration change that disables the vulnerable endpoint). | Application Owner / Patch Management | ≤ 2 hours |
+| 4 | **Validate WAF and IDS signatures** – ensure signatures for T1190.001 (SQL Injection) are active and generate alerts on repeat attempts. | SOC Analyst | ≤ 30 min |
+| 5 | **Reset any credentials** that were used to access the web application (service accounts, admin accounts). Enable MFA on all privileged accounts. | IAM / Security Engineer | ≤ 2 hours |
+| 6 | **Perform a vulnerability scan** of the entire DMZ to confirm no other instances of the same flaw exist. | Vulnerability Management | ≤ 4 hours |
+| 7 | **Update incident ticket** with findings, actions taken, and evidence locations; prepare a brief for senior leadership. | Incident Commander | Ongoing (final by end of shift) |
+
+---
+
+**Playbook G1 – Brute‑Force Credential Guessing (Password Guessing – T1110)**  
+
+**Management Summary (2 sentences)**  
+A rapid burst of failed login attempts was observed across many accounts, indicating a credential‑spraying/brute‑force campaign. The lack of account lockout and MFA allowed the attacker to continue guessing passwords, increasing the risk of a successful compromise.  
+
+**Immediate Containment Actions**  
+- Enforce an immediate temporary lockout on the targeted accounts (e.g., 15‑minute lock after 5 failures).  
+- Enable MFA for all privileged and remote‑access accounts.  
+- Begin real‑time monitoring of authentication logs for additional failed‑login spikes.  
+
+**Containment & Eradication Steps**  
+
+| # | Action | Owner | Target Completion |
+|---|--------|-------|--------------------|
+| 1 | **Activate account lockout policy** – set threshold to 5 failed attempts, lockout duration 15 min, reset counter after 30 min. | IAM / AD Administrator | ≤ 15 min |
+| 2 | **Force password reset** for any accounts that experienced ≥ 3 failed attempts during the burst. | IAM Team | ≤ 1 hour |
+| 3 | **Enable MFA** on all accounts with admin or remote‑access privileges; require MFA for all interactive logins. | Security Engineer | ≤ 2 hours |
+| 4 | **Collect authentication logs** (Domain Controllers, VPN, cloud IdP) for the last 72 hours and store in evidence store. | SOC Analyst | ≤ 30 min |
+| 5 | **Create a detection rule** in the SIEM to alert on > 20 failed logins per minute across distinct usernames from a single source IP. | SOC Analyst | ≤ 1 hour |
+| 6 | **Block the offending source IP(s)** at the perimeter firewall or rate‑limit traffic from those IPs. | Network Security Team | ≤ 15 min |
+| 7 | **Review privileged account usage** for any successful logins that occurred after the burst; terminate suspicious sessions. | IR Analyst | ≤ 2 hours |
+| 8 | **Document actions** and update the incident record; provide a concise briefing to senior leadership. | Incident Commander | End of shift |
+
+---
+
+**Playbook G7 – Remote Services Lateral Movement (Remote Services – T1021)**  
+
+**Management Summary (2 sentences)**  
+Valid‑account remote‑service logins were observed, followed by encryption of ~15 k files on a secondary host, indicating ransomware‑style lateral propagation. Weak controls on remote access (no MFA, permissive network exposure) enabled the adversary to move laterally and begin encryption.  
+
+**Immediate Containment Actions**  
+- Immediately disable the compromised remote‑service accounts (or change their passwords).  
+- Disconnect the infected host from the network (quarantine VLAN).  
+- Stop the encryption process if still running (e.g., terminate suspicious processes).  
+
+**Containment & Eradication Steps**  
+
+| # | Action | Owner | Target Completion |
+|---|--------|-------|--------------------|
+| 1 | **Quarantine the affected endpoint** – move the host to an isolated VLAN or shut down network interface. | Network Operations | ≤ 15 min |
+| 2 | **Terminate suspicious remote‑service sessions** (RDP, SSH, VNC) on the compromised host and any other hosts showing similar activity. | IR Analyst | ≤ 30 min |
+| 3 | **Reset passwords** for all accounts that logged in via remote services during the incident window; enforce MFA on all remote‑access accounts. | IAM / Security Engineer | ≤ 2 hours |
+| 4 | **Collect volatile data** (memory dump, running processes, open network connections) from the infected host before shutdown. | Forensic Analyst | ≤ 1 hour |
+| 5 | **Create a full disk image** of the infected host for later ransomware decryption analysis. | Forensic Analyst | ≤ 2 hours |
+| 6 | **Block lateral movement paths** – update firewall rules to restrict RDP/SSH/VNC to known jump‑hosts only; enforce VPN‑only remote access. | Network Security Team | ≤ 3 hours |
+| 7 | **Deploy endpoint detection/response (EDR) updates** with ransomware‑behavior signatures across the environment. | Endpoint Management | ≤ 4 hours |
+| 8 | **Run a network‑wide credential‑reuse scan** to identify other accounts that may have been compromised; remediate as needed. | IAM Team | ≤ 6 hours |
+| 9 | **Restore encrypted files** from backups where possible; verify integrity before returning to production. | Backup/Recovery Team | As per recovery SLA |
+|10 | **Update incident documentation** and provide a concise executive briefing covering impact, containment, and next‑step remediation. | Incident Commander | End of shift |
+
+---
