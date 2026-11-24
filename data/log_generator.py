@@ -102,7 +102,7 @@ class ARGUSLogGenerator:
 
     def generate_web_exploit(self, attacker_ip=None, target_ip=None):
         """An exploit attempt against a web application (matches a CVE in the knowledge base)."""
-        attacker_ip = attacker_ip or random.choice(self.external_ips)
+        attacker_ip = attacker_ip or random.choice(self.external_ips[:5])  # public addresses only
         target_ip = target_ip or "10.0.0.8"
         return [{
             "timestamp": self.generate_timestamp(),

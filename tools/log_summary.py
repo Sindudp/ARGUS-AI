@@ -6,10 +6,19 @@
 #  - task_text: read the text output of a finished CrewAI task
 #  - save_report: write the final report as JSON
 
+import ipaddress
 import json
 import os
 from collections import defaultdict
 from datetime import datetime
+
+
+def scope(ip):
+    """'internal' for private addresses (10.x, 192.168.x, 172.16-31.x), otherwise 'external'."""
+    try:
+        return "internal" if ipaddress.ip_address(ip).is_private else "external"
+    except ValueError:
+        return "unknown"
 
 
 def summarize_logs(logs, detector, hide_labels=True):
@@ -24,7 +33,9 @@ def summarize_logs(logs, detector, hide_labels=True):
         entry = {
             "group": f"G{number}",
             "source_ip": source_ip,
+            "source_scope": scope(source_ip),
             "dest_ip": first["dest_ip"],
+            "dest_scope": scope(first["dest_ip"]),
             "event_type": first["event_type"],
             "event_count": len(items),
             "first_seen": first["timestamp"],
@@ -34,7 +45,7 @@ def summarize_logs(logs, detector, hide_labels=True):
         }
         if not hide_labels:
             entry["attack_type"] = attack_type
-        for field in ("status", "user", "description"):
+        for field in ("status", "user", "description", "process", "extension"):
             if field in first:
                 entry[field] = first[field]
         for field in ("count", "bytes_sent", "ports_scanned", "files_encrypted"):
